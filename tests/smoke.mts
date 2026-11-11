@@ -1,4 +1,4 @@
-// Browser smoke test for the live site (or any deployment): the key Arcade and portfolio flows.
+// Browser smoke test for the live Arcade (or any deployment): the key game flows.
 //   pnpm smoke                                    # against production
 //   pnpm smoke https://portfolio-xyz.vercel.app   # against a preview
 // Needs Google Chrome; set CHROME_PATH if it isn't in the default macOS location.
@@ -9,7 +9,7 @@ import puppeteer, { type Page } from "puppeteer-core";
 const { buildHootBoard } = (await import("../lib/games/hoot.ts")) as typeof import("../lib/games/hoot");
 const { solveLanterns } = (await import("../lib/games/lantern.ts")) as typeof import("../lib/games/lantern");
 
-const BASE = (process.argv[2] ?? "https://portfolio-gurudeep-naik.vercel.app").replace(/\/$/, "");
+const BASE = (process.argv[2] ?? "https://gurudeep-arcade.vercel.app").replace(/\/$/, "");
 const CHROME = process.env.CHROME_PATH ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const GAMES = ["hoot", "sudoku", "ludo", "sort", "arrows", "brain", "reflex", "lantern"];
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
@@ -172,86 +172,6 @@ if (challenge) {
     await page.goto(`${BASE}/play/${g}`, { waitUntil: "networkidle2" });
     await wait(500);
     ok(`${g}: page loads and fits 320 px`, /How to play/.test(await text(page)) && (await widthOk(page)));
-  }
-}
-
-// ---------- Portfolio ----------
-{
-  const ctx = await browser.createBrowserContext();
-  const page = await ctx.newPage();
-  await page.setViewport({ width: 1280, height: 800 });
-  page.on("pageerror", e => ok(`no page errors (${(e as Error).message.slice(0, 80)})`, false));
-  await page.goto(BASE, { waitUntil: "networkidle2" });
-  await wait(2200);
-  ok("home stats end on the real value", (await page.evaluate(() => [...document.querySelectorAll<HTMLElement>("dl dd span[aria-hidden]")].find(e => e.offsetParent !== null)?.textContent)) === "4 yrs");
-  await page.evaluate(() => document.getElementById("experience")!.scrollIntoView({ behavior: "instant" }));
-  await wait(700);
-  ok("nav marks the section on screen", (await page.evaluate(() => document.querySelector(".nav-link[data-active]")?.textContent)) === "Experience");
-  const before = await page.evaluate(() => document.documentElement.dataset.theme);
-  await page.click('button[aria-label^="Switch to"]');
-  await wait(1000);
-  ok("theme switches", (await page.evaluate(() => document.documentElement.dataset.theme)) !== before);
-  await page.evaluate(() => document.getElementById("work")!.scrollIntoView({ behavior: "instant" }));
-  await wait(400);
-  // The phone and desktop layouts both have project titles; click the one that's showing.
-  await page.evaluate(() => ([...document.querySelectorAll<HTMLElement>("#work h3 a")].find(a => a.offsetParent !== null))!.click());
-  await page.waitForFunction(() => location.pathname.startsWith("/projects/"), { timeout: 6000 }).catch(() => undefined);
-  await wait(900);
-  ok("project page opens from its card", (await page.evaluate(() => location.pathname)).startsWith("/projects/"));
-  ok("architecture packets run", await page.evaluate(() => document.querySelectorAll(".flow-packet").length > 0));
-  for (const path of ["/", "/projects/erp-sync-starter", "/privacy", "/writing", "/writing/building-the-arcade"]) {
-    const ph = await phone();
-    await ph.goto(`${BASE}${path}`, { waitUntil: "networkidle2" });
-    await wait(800);
-    ok(`${path}: fits a 375 px phone`, await widthOk(ph));
-  }
-}
-
-// ---------- Phone layout: tab bar, swipe cards, accordions ----------
-{
-  const page = await phone();
-  await page.goto(BASE, { waitUntil: "networkidle2" });
-  await wait(1000);
-  ok("phone: bottom tab bar with 5 tabs", (await page.$$(".site-tabs a")).length === 5);
-  ok("phone: profile card actions (Résumé, Email, LinkedIn, GitHub)", /Résumé[\s\S]*Email[\s\S]*LinkedIn[\s\S]*GitHub/.test(await page.$eval("main section", e => (e as HTMLElement).innerText)));
-  ok("phone: projects as swipe cards", (await page.$$("#work-m article")).length === 3);
-  await page.evaluate(() => document.getElementById("experience")!.scrollIntoView({ behavior: "instant" }));
-  await wait(700);
-  ok("phone: About tab active over Experience", (await page.$eval('.site-tabs a[aria-current]', e => e.textContent).catch(() => "")) === "About");
-  const closed = await page.$$eval("#experience details.xp", ds => ds.filter(d => !(d as HTMLDetailsElement).open).length);
-  ok("phone: experience accordion (first open, rest closed)", closed >= 1);
-  await page.goto(`${BASE}/projects/erp-sync-starter`, { waitUntil: "networkidle2" });
-  await wait(600);
-  ok("phone: failure cases open on tap", (await page.$$("main details.xp")).length > 3);
-  ok("phone: tab bar marks Work on a project page", (await page.$eval('.site-tabs a[aria-current]', e => e.textContent).catch(() => "")) === "Work");
-
-  // Taps on the phone buttons are reported to /api/click (sendBeacon bodies aren't visible here, so count the calls).
-  const clicks = await phone();
-  let sent = 0;
-  clicks.on("request", r => { if (r.url().endsWith("/api/click")) sent++; });
-  await clicks.goto(BASE, { waitUntil: "networkidle2" });
-  await wait(800);
-  await clicks.evaluate(() => (document.querySelector('[data-track="phone-project-erp-sync-starter"]') as HTMLElement).click());
-  await wait(1500);
-  await clicks.evaluate(() => (document.querySelector('[data-track="phone-tab-writing"]') as HTMLElement).click());
-  await wait(1500);
-  ok(`phone taps are tracked (${sent} click reports for 2 taps)`, sent === 2);
-}
-
-// ---------- Live project demos linked from the project pages ----------
-{
-  const { projects } = (await import("../content/projects.ts")) as typeof import("../content/projects");
-  for (const p of projects.filter(x => x.demo)) {
-    const ctx = await browser.createBrowserContext();
-    const page = await ctx.newPage();
-    await page.setViewport({ width: 1280, height: 800 });
-    const failedApi: string[] = [];
-    page.on("response", r => { if (r.url().includes("/api/") && r.status() >= 400) failedApi.push(`${r.status()} ${new URL(r.url()).pathname}`); });
-    const res = await page.goto(p.demo!, { waitUntil: "networkidle2", timeout: 60000 }).catch(() => null);
-    await wait(2500);
-    const title = await page.title().catch(() => "");
-    ok(`${p.name} demo loads (${res?.status()} "${title.slice(0, 40)}")${failedApi.length ? ` api errors: ${failedApi.slice(0, 3).join(", ")}` : ""}`, res?.status() === 200 && title.length > 0 && !failedApi.length);
-    await ctx.close();
   }
 }
 
