@@ -1,0 +1,39 @@
+{
+  "name": "gurudeep-portfolio",
+  "version": "2.0.0",
+  "private": true,
+  "engines": {
+    "node": "24.x"
+  },
+  "packageManager": "pnpm@9.15.9",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "smoke": "tsx tests/smoke.mts"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "1.0.2",
+    "@vercel/analytics": "1.5.0",
+    "next": "15.5.27",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "web-push": "3.6.7"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "^24",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/web-push": "3.6.4",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.27",
+    "puppeteer-core": "23.11.1",
+    "tailwindcss": "4.3.3",
+    "tsx": "4.19.2",
+    "typescript": "~5.9.3"
+  }
+}

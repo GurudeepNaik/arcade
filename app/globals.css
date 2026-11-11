@@ -1,0 +1,662 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  --bg: #fbfbfa;
+  --bg-soft: #f3f3f1;
+  --card: #ffffff;
+  --fg: #16181d;
+  --muted: #5b616e;
+  --line: #e4e4e0;
+  --accent: #0e7c66;
+  --accent-soft: #e3f3ef;
+  --accent-fg: #ffffff;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: #0c0e12;
+  --bg-soft: #12151b;
+  --card: #151921;
+  --fg: #e8eaee;
+  --muted: #9aa1ad;
+  --line: #262b35;
+  --accent: #3ccfa9;
+  --accent-soft: #10302a;
+  --accent-fg: #06120f;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-soft: var(--bg-soft);
+  --color-card: var(--card);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-fg: var(--accent-fg);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono-jb), ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Motion tokens for the whole site (the Arcade sets its own copy). */
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+html {
+  /* No grey tap flash on phones: every control has its own pressed state instead. */
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+.fade-up {
+  animation: fade-up 0.6s ease-out both;
+}
+
+/* ---------- Portfolio motion ----------
+   Transform, opacity and clip-path only. The reduced-motion rule above switches every one of these off,
+   and every element starts in its final, visible state, so nothing depends on an animation running. */
+
+/* Hero, first visit: lines arrive in order (--i), the name rises word by word from behind a mask. */
+.enter { animation: enter 800ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 80ms + 80ms); }
+@keyframes enter { from { opacity: 0; transform: translateY(16px); } }
+.rise { display: inline-block; overflow: clip; overflow-clip-margin: 0.12em; vertical-align: top; }
+.rise > span { display: inline-block; animation: rise 950ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 70ms + 120ms); }
+@keyframes rise { from { transform: translateY(108%); } }
+.photo-reveal { animation: photo-reveal 1100ms var(--ease-out) 260ms both; }
+@keyframes photo-reveal { from { clip-path: inset(100% 0 0 0 round 24px); } to { clip-path: inset(0 0 0 0 round 24px); } }
+.photo-reveal img { animation: photo-zoom 1500ms var(--ease-out) 260ms both; }
+@keyframes photo-zoom { from { transform: scale(1.12); } }
+.stats-in { animation: enter 700ms var(--ease-out) 450ms both; }
+
+/* A soft glow that follows the cursor across the hero (mouse only; components/motion/Spotlight.tsx). */
+.spotlight {
+  position: absolute; left: 0; top: 0; width: 36rem; height: 36rem; margin: -18rem 0 0 -18rem; border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 20%, transparent), transparent 65%);
+  opacity: 0; pointer-events: none; will-change: transform; transition: opacity 400ms var(--ease-out);
+}
+
+/* Scroll reveals, driven by the scroll position itself (no JavaScript). Browsers without scroll timelines
+   simply show the content. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal { animation: reveal var(--ease-out) both; animation-timeline: view(); animation-range: entry 0% entry 60%; }
+    .reveal-dot { animation: reveal-dot var(--ease-out) both; animation-timeline: view(); animation-range: entry 30% entry 90%; }
+    /* The experience line draws itself while the list scrolls through the screen. */
+    .timeline::after {
+      content: ""; position: absolute; left: -1.5px; top: 0; bottom: 0; width: 2px; border-radius: 2px; background: var(--accent);
+      transform-origin: top; animation: draw linear both; animation-timeline: view(); animation-range: cover 5% cover 75%;
+    }
+  }
+}
+@keyframes reveal { from { opacity: 0; transform: translateY(36px) scale(0.98); } }
+@keyframes reveal-dot { from { transform: scale(0.3); opacity: 0; } }
+@keyframes draw { from { transform: scaleY(0); } }
+
+/* Reading progress under the header. */
+.scroll-progress { position: absolute; inset: auto 0 -1px 0; height: 2px; background: var(--accent); transform-origin: left; transform: scaleX(0); }
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .scroll-progress { animation: progress linear both; animation-timeline: scroll(root); }
+  }
+}
+@keyframes progress { to { transform: scaleX(1); } }
+
+/* Sliding pill behind the menu item for the section on screen (components/motion/NavMarker.tsx). */
+.nav-pill { position: absolute; left: 0; top: 50%; height: 2.25rem; margin-top: -1.125rem; border-radius: 0.5rem; background: var(--accent-soft); opacity: 0; transition: transform 450ms var(--ease-out), width 450ms var(--ease-out), opacity 200ms ease; }
+.nav-link[data-active] { color: var(--fg); }
+
+/* The hero glow drifts slowly, so the page feels alive while you read. */
+.aurora { animation: aurora 18s var(--ease-in-out) infinite alternate; }
+@keyframes aurora { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(-6%, 4%, 0) scale(1.15); } }
+
+/* Page transitions: a quick crossfade with a small lift; shared titles glide on their own. */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root) { animation: 220ms var(--ease-out) both vt-out; }
+  ::view-transition-new(root) { animation: 380ms var(--ease-out) both vt-in; }
+  ::view-transition-group(*) { animation-duration: 520ms; animation-timing-function: var(--ease-out); }
+}
+@keyframes vt-out { to { opacity: 0; transform: translateY(-8px); } }
+/* The header stays put while the page under it changes. */
+::view-transition-old(site-header), ::view-transition-new(site-header) { animation: none; }
+@keyframes vt-in { from { opacity: 0; transform: translateY(12px); } }
+/* Theme switch: no crossfade, the new theme is revealed by the growing circle (ThemeToggle). */
+html.theme-switching::view-transition-old(root), html.theme-switching::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+html.theme-switching::view-transition-old(root) { z-index: 1; }
+html.theme-switching::view-transition-new(root) { z-index: 2; }
+
+/* Architecture diagrams: a packet hops along each lane and lights the step it reaches. One lap per lane. */
+.flow-lane { --lap: calc(var(--hops) * 1.1s); }
+.flow-packet { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px 2px color-mix(in srgb, var(--accent) 60%, transparent); opacity: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .flow-packet { animation: packet-v var(--lap) var(--ease-in-out) infinite; animation-delay: calc((var(--hop) - 1) * 1.1s); }
+  .flow-step { animation: step-glow var(--lap) ease-out infinite; animation-delay: calc(var(--hop) * 1.1s - 0.25s); }
+  @media (min-width: 1024px) { .flow-packet { animation-name: packet-h; } }
+}
+@keyframes packet-v { 0% { transform: translateY(-14px); opacity: 0; } 4% { opacity: 1; } 18% { transform: translateY(14px); opacity: 1; } 22%, 100% { transform: translateY(14px); opacity: 0; } }
+@keyframes packet-h { 0% { transform: translateX(-14px); opacity: 0; } 4% { opacity: 1; } 18% { transform: translateX(14px); opacity: 1; } 22%, 100% { transform: translateX(14px); opacity: 0; } }
+@keyframes step-glow { 0% { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); } 25%, 100% { border-color: var(--line); box-shadow: 0 0 0 0 transparent; } }
+
+/* ---------- Phone tab bar (components/MobileTabBar.tsx) ---------- */
+.site-tabs {
+  position: fixed; inset-inline: 0; bottom: 0; z-index: 40;
+  padding: 0.3rem 0.5rem calc(0.3rem + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--bg) 95%, transparent);
+  backdrop-filter: blur(16px) saturate(1.4); -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border-top: 1px solid var(--line);
+}
+.site-tab {
+  display: grid; justify-items: center; gap: 2px; min-height: 52px; padding-top: 6px; border-radius: 12px;
+  color: var(--muted); font-size: 11px; font-weight: 500; user-select: none; touch-action: manipulation;
+  transition: color 150ms ease, transform 160ms var(--ease-out);
+}
+.site-tab:active { transform: scale(0.94); }
+.site-tab[aria-current] { color: var(--accent); }
+.site-tab[aria-current] svg { stroke-width: 2.2; }
+@media (max-width: 767px) {
+  /* Room under the page for the bar, and anchors that stop above it. */
+  body:has(.site-tabs) { padding-bottom: calc(4.25rem + env(safe-area-inset-bottom)); }
+  html:has(.site-tabs) { scroll-padding-bottom: calc(5rem + env(safe-area-inset-bottom)); }
+}
+
+/* Experience accordion (phones): the chevron turns when a company opens. */
+.xp > summary::-webkit-details-marker { display: none; }
+.xp-chevron { transition: transform 250ms var(--ease-out); }
+.xp[open] .xp-chevron { transform: rotate(90deg); }
+.xp > summary:active { background: var(--bg-soft); }
+
+/* ---------- Phone layout helpers (below md) ----------
+   .swipe: a row of cards you swipe through, one at a time with the next peeking in (App Store style).
+   From md up it falls back to the element's own grid. Items inside skip the scroll reveal on phones:
+   a scroll timeline inside a sideways scroller would hide the cards that are off to the side. */
+@media (max-width: 767px) {
+  .swipe {
+    /* relative: screen-reader-only labels inside (position: absolute) stay inside the scroller instead of widening the page. */
+    position: relative; display: flex !important; gap: 0.875rem; overflow-x: auto; overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory; margin-inline: -1rem; padding: 0 1rem 0.5rem; scroll-padding-inline: 1rem;
+    scrollbar-width: none;
+  }
+  .swipe::-webkit-scrollbar { display: none; }
+  .swipe > * { flex: 0 0 84%; scroll-snap-align: start; }
+  .swipe > .reveal { animation: none; }
+  /* A row of chips that scrolls sideways instead of wrapping onto many lines; the fade says there's more. */
+  .chip-row {
+    position: relative; flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; margin-right: -1rem; padding-right: 1.5rem;
+    mask-image: linear-gradient(to right, #000 82%, transparent);
+  }
+  .chip-row::-webkit-scrollbar { display: none; }
+  .chip-row > * { flex-shrink: 0; }
+}
+
+/* Hover lifts only where there is a real hover (mouse); a press dips on every device. */
+@media (hover: hover) and (pointer: fine) {
+  .lift { transition: transform 300ms var(--ease-out), box-shadow 300ms var(--ease-out), border-color 200ms ease; }
+  .lift:hover { transform: translateY(-4px); }
+  .zoom-img img { transition: transform 700ms var(--ease-out); }
+  .group:hover .zoom-img img { transform: scale(1.035); }
+}
+.press { transition: transform 160ms var(--ease-out), opacity 150ms ease, border-color 150ms ease, color 150ms ease; }
+.press:active { transform: scale(0.97); }
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* The Arcade: a soft toy world. Plump shaded surfaces, warm light, and motion that springs.
+   Motion uses transform and opacity only, so it stays smooth on phones. Always light, like a toy shelf. */
+.arcade {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --spring: linear(0, 0.009, 0.035 2.1%, 0.141, 0.281 6.7%, 0.723 12.9%, 0.938 16.7%, 1.017, 1.077, 1.121, 1.149 24.3%, 1.159, 1.163, 1.161, 1.154 29.9%, 1.129 32.8%, 1.051 39.6%, 1.017 43.1%, 0.991, 0.977 51%, 0.974 53.8%, 0.975 57.1%, 0.997 69.8%, 1.003 76.9%, 1);
+  --ink: #1f3d3a;
+  --ink-soft: #5d7a75;
+  --mint: #e9f9f1;
+  --cream: #fff7e8;
+  --tile: #ffffff;
+  --well: #eef6f1;
+  --well-2: #dcefe6;
+  --glow: rgb(31 61 58 / 0.1);
+  --good: #12a150;
+  --bad: #e5484d;
+  --shade: #1f3d3a;
+  --rim: rgb(255 255 255);
+  --lift: rgb(31 61 58 / 0.2);
+  --glass-a: rgb(255 255 255 / 0.75);
+  --glass-b: rgb(255 255 255 / 0.25);
+  --glass-c: rgb(255 255 255 / 0.55);
+  --glass-edge: rgb(255 255 255 / 0.95);
+  --ludo-track: #fffdf6;
+  --ludo-seam: #ece4d2;
+  --tile-glow: transparent;
+  --square: rgb(255 255 255 / 0.3);
+  --square-light: rgb(255 255 255 / 0.5);
+  --square-dark: rgb(0 0 0 / 0.07);
+  --lab-top: #dff6ff;
+  --lab-bottom: #eafaf3;
+  --alert: #ffe1e0;
+  --on-alert: #b3261e;
+  --medal-ink: #4a3300;
+  --gold: #ffc53d;
+  --silver: #d4dde0;
+  --bronze: #eda76b;
+  --g: #ff7aa2;
+  --g-deep: #d64a78;
+  --on-g: #ffffff;
+  background: radial-gradient(90rem 40rem at 50% -10rem, var(--cream), transparent 70%), var(--mint);
+  color: var(--ink);
+  color-scheme: light;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+/* Night in the Arcade: the same toys under a starry sky, with colour that glows. */
+[data-theme="dark"] .arcade {
+  --ink: #e6f7f0;
+  --ink-soft: #9dbdb5;
+  --mint: #0c1f24;
+  --cream: #173a3f;
+  --tile: #17323a;
+  --well: #21434b;
+  --well-2: #2d565e;
+  --glow: rgb(0 0 0 / 0.4);
+  --good: #5fe3a1;
+  --bad: #ff8a84;
+  --alert: #5a2529;
+  --on-alert: #ffc9c5;
+  --shade: #04141a;
+  --rim: rgb(255 255 255 / 0.08);
+  --lift: rgb(0 0 0 / 0.55);
+  --glass-a: rgb(255 255 255 / 0.2);
+  --glass-b: rgb(255 255 255 / 0.05);
+  --glass-c: rgb(255 255 255 / 0.13);
+  --glass-edge: rgb(255 255 255 / 0.45);
+  --ludo-track: #2a4d55;
+  --ludo-seam: #17323a;
+  --lab-top: #14323f;
+  --lab-bottom: #17323a;
+  --tile-glow: color-mix(in srgb, var(--c, transparent) 45%, transparent);
+  --square: rgb(255 255 255 / 0.2);
+  --square-light: rgb(255 255 255 / 0.32);
+  background:
+    radial-gradient(1.5px 1.5px at 12% 18%, rgb(255 255 255 / 0.8), transparent),
+    radial-gradient(1px 1px at 34% 8%, rgb(255 255 255 / 0.7), transparent),
+    radial-gradient(1.5px 1.5px at 58% 22%, rgb(255 255 255 / 0.6), transparent),
+    radial-gradient(1px 1px at 78% 12%, rgb(255 255 255 / 0.8), transparent),
+    radial-gradient(1.5px 1.5px at 92% 30%, rgb(255 255 255 / 0.6), transparent),
+    radial-gradient(1px 1px at 22% 44%, rgb(255 255 255 / 0.5), transparent),
+    radial-gradient(1.5px 1.5px at 68% 52%, rgb(255 255 255 / 0.5), transparent),
+    radial-gradient(1px 1px at 46% 70%, rgb(255 255 255 / 0.5), transparent),
+    radial-gradient(1px 1px at 86% 78%, rgb(255 255 255 / 0.5), transparent),
+    radial-gradient(90rem 40rem at 50% -10rem, var(--cream), transparent 70%),
+    var(--mint);
+  background-size: 460px 460px, 460px 460px, 460px 460px, 460px 460px, 460px 460px, 460px 460px, 460px 460px, 460px 460px, 460px 460px, auto, auto;
+  color-scheme: dark;
+}
+.moon { display: none; }
+[data-theme="dark"] .arcade .moon {
+  display: block;
+  position: absolute;
+  top: -6px;
+  right: 8%;
+  width: 64px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 34%, var(--moon-light), var(--moon));
+  box-shadow: 0 0 44px 10px var(--moon-glow);
+  pointer-events: none;
+}
+@media (max-width: 767px) {
+  [data-theme="dark"] .arcade .moon { display: none; }
+}
+.arcade { --moon: #ffd98a; --moon-light: #fff4d2; --moon-glow: rgb(255 217 138 / 0.28); }
+.g-text { color: var(--g-deep); }
+[data-theme="dark"] .arcade .g-text { color: color-mix(in srgb, var(--g) 72%, white); }
+.g-fill { fill: var(--g-deep); }
+[data-theme="dark"] .arcade .g-fill { fill: var(--g); }
+.arcade :focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+.arcade-title { font-family: var(--font-display), var(--font-inter), sans-serif; font-weight: 700; letter-spacing: -0.01em; overflow-wrap: break-word; min-width: 0; }
+.arcade-panel {
+  background: var(--tile);
+  border: 1px solid transparent;
+  border-radius: 28px;
+  box-shadow: 0 1px 0 var(--rim) inset, 0 2px 4px var(--glow), 0 18px 40px -12px var(--lift);
+}
+.soft-chip { background: var(--tile); border-radius: 999px; box-shadow: 0 1px 2px var(--glow), 0 6px 14px -6px var(--lift); }
+/* Phones: a bottom tab bar within thumb reach. sm and up: the segmented control under the header. */
+.hub-tabs {
+  position: fixed; inset-inline: 0; bottom: 0; z-index: 40;
+  padding: 0.4rem 0.75rem calc(0.4rem + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--tile) 88%, transparent);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 -1px 0 var(--rim), 0 -10px 30px -12px var(--lift);
+}
+/* The bar floats over the page end, so the footer below it gets room to scroll clear. */
+@media (max-width: 639px) {
+  body:has(.hub-tabs) footer { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom)); }
+  /* Keyboard focus and scroll-into-view stop above the bar, never behind it. */
+  html:has(.hub-tabs) { scroll-padding-bottom: calc(5rem + env(safe-area-inset-bottom)); }
+}
+@media (min-width: 640px) {
+  .hub-tabs { position: static; margin-top: 1.5rem; padding: 0.375rem; border-radius: 22px; background: var(--tile); backdrop-filter: none; box-shadow: 0 1px 2px var(--glow), 0 6px 14px -6px var(--lift); }
+}
+.hub-tab { color: var(--ink-soft); transition: background-color 180ms var(--ease-out), color 180ms var(--ease-out); touch-action: manipulation; }
+.hub-tab:hover { color: var(--ink); }
+.hub-tab[aria-selected="true"] { color: var(--ink); }
+.hub-tab[aria-selected="true"] svg { color: var(--good); }
+@media (min-width: 640px) {
+  .hub-tab[aria-selected="true"] { background: var(--ink); color: var(--tile); font-family: var(--font-display), var(--font-inter), sans-serif; }
+}
+.hub-stat { transition: background-color 150ms var(--ease-out); touch-action: manipulation; }
+.hub-stat:hover { background: var(--well); }
+/* Continue: a mini-player pill floating above the phone tab bar, bottom right on wider screens. */
+.continue-pill {
+  position: fixed; z-index: 35; left: 0.75rem; right: 0.75rem; bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  display: flex; align-items: center; gap: 0.25rem; padding: 0.4rem 0.4rem 0.4rem 0.5rem; border-radius: 22px;
+  background: var(--tile); box-shadow: 0 1px 0 var(--rim) inset, 0 12px 32px -8px rgb(0 0 0 / 0.45);
+  animation: continue-in 420ms var(--ease-out) 600ms both;
+}
+@media (min-width: 640px) { .continue-pill { left: auto; right: 1.25rem; bottom: 1.25rem; width: 22rem; } }
+@keyframes continue-in { from { opacity: 0; transform: translateY(16px); } }
+/* Lantern Night tiles: dusk violet when dark, warm gold with a glow when lit. */
+.lantern { background: color-mix(in srgb, #8f7bf0 26%, var(--well)); transition: background-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out); touch-action: manipulation; }
+.lantern .lantern-body { fill: #8f7bf0; transition: fill 200ms var(--ease-out); }
+.lantern .lantern-cap { fill: #5a4a8a; }
+.lantern .lantern-rib { stroke: #6a54d6; }
+.lantern-on { background: color-mix(in srgb, #ffd36b 30%, var(--well)); box-shadow: 0 0 22px -4px #ffcf5a, inset 0 0 0 1px rgb(255 211 107 / 0.5); }
+.lantern-on .lantern-body { fill: #ffc93d; }
+.lantern-on .lantern-rib { stroke: #e59a00; }
+.lantern-flip { animation: lantern-flip 260ms var(--spring, ease-out); }
+.lantern-hint { outline: 3px solid #ffffff; outline-offset: 2px; animation: lantern-hint 900ms ease-in-out infinite; }
+@keyframes lantern-hint { 50% { outline-color: #ffd36b; box-shadow: 0 0 24px 2px #ffd36b; } }
+@keyframes lantern-flip { 0% { transform: scale(0.86); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .lantern-flip, .lantern-hint { animation: none; } .lantern, .lantern .lantern-body { transition: none; } }
+/* How-to-play walkthrough: a bottom sheet on phones, a centred card from sm up. */
+.demo-sheet {
+  margin: auto auto 0; width: 100%; max-width: 30rem; max-height: 92dvh; overflow-y: auto;
+  padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom)); border: 0; border-radius: 28px 28px 0 0;
+  background: var(--tile); color: var(--ink); box-shadow: 0 -10px 40px rgb(0 0 0 / 0.35);
+}
+.demo-sheet[open] { animation: demo-up 320ms var(--ease-out); }
+.demo-sheet::backdrop { background: rgb(5 15 18 / 0.55); backdrop-filter: blur(2px); }
+@media (min-width: 640px) { .demo-sheet { margin: auto; border-radius: 28px; padding: 1.25rem; } }
+@keyframes demo-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.demo-stage { border-radius: 22px; background: var(--well); overflow: hidden; }
+.demo-cell { border-radius: 10px; }
+.demo-key { border-radius: 14px; background: var(--tile); box-shadow: 0 3px 0 var(--well-2); }
+.demo-token { display: block; width: 7%; aspect-ratio: 1; border-radius: 999px; border: 3px solid #fff; box-shadow: 0 2px 4px rgb(0 0 0 / 0.3); }
+.demo-dice { border-radius: 18px; background: #fff; color: #1f3d3a; box-shadow: 0 4px 0 #cfd8d4; }
+.demo-flask { border: 3px solid color-mix(in srgb, var(--ink) 30%, transparent); border-top: 0; border-radius: 0 0 999px 999px; background: rgb(255 255 255 / 0.08); }
+.demo-liquid { display: block; flex-shrink: 0; }
+.demo-arrow { border-radius: 22%; background: linear-gradient(160deg, #ffc08f, #ff9142); box-shadow: 0 3px 0 #dd6410; }
+.demo-fly { animation: demo-fly 900ms var(--ease-in-out) forwards; }
+@keyframes demo-fly { to { transform: translateX(180%); opacity: 0; } }
+.demo-shake { animation: demo-shake 420ms ease-in-out; }
+@keyframes demo-shake { 20%, 60% { transform: translateX(-6%); } 40%, 80% { transform: translateX(6%); } }
+.demo-pop { animation: demo-pop 380ms var(--ease-out); }
+@keyframes demo-pop { from { transform: scale(0.3); opacity: 0; } to { transform: none; opacity: 1; } }
+.demo-finger { position: absolute; z-index: 5; width: 0; height: 0; transition: left 500ms var(--ease-in-out), top 500ms var(--ease-in-out); pointer-events: none; }
+.demo-finger::after { content: ""; position: absolute; left: -12px; top: -12px; width: 24px; height: 24px; border-radius: 999px; background: rgb(255 255 255 / 0.9); box-shadow: 0 0 0 3px rgb(0 0 0 / 0.25); }
+.demo-ring { position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; border-radius: 999px; border: 3px solid #fff; animation: demo-ring 700ms ease-out 2 both; }
+.demo-ring--double { animation: demo-ring 380ms ease-out 2 both; }
+@keyframes demo-ring { from { transform: scale(0.4); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .demo-sheet[open], .demo-fly, .demo-shake, .demo-pop, .demo-ring, .demo-ring--double { animation: none; }
+  .demo-finger { transition: none; }
+}
+.install-btn {
+  display: inline-flex; align-items: center; gap: 0.4rem; min-height: 40px; padding: 0 0.9rem;
+  border-radius: 999px; background: var(--well); color: var(--ink); font-size: 0.875rem; font-weight: 700;
+  touch-action: manipulation; transition: background-color 150ms var(--ease-out);
+}
+.install-btn:hover { background: var(--well-2); }
+
+/* Loading screen: Pip hops, the shadow breathes with it, three dots take turns. */
+.load-hop { animation: load-hop 900ms var(--ease-in-out) infinite; }
+.load-shadow { animation: load-shadow 900ms var(--ease-in-out) infinite; }
+.load-dot { animation: load-dot 1.2s var(--ease-in-out) infinite; }
+.load-fade { animation: load-fade 400ms var(--ease-out) 150ms both; }
+@keyframes load-hop { 0%, 100% { transform: translateY(0) scale(1.04, 0.96); } 45% { transform: translateY(-22%) scale(0.98, 1.03); } }
+@keyframes load-shadow { 0%, 100% { transform: scaleX(1); opacity: 0.35; } 45% { transform: scaleX(0.6); opacity: 0.15; } }
+@keyframes load-dot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.35; } 30% { transform: translateY(-5px); opacity: 1; } }
+@keyframes load-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .load-hop, .load-shadow, .load-dot { animation: none; }
+  .load-dot { opacity: 0.7; }
+}
+@media (prefers-reduced-motion: reduce) { .hub-tab, .hub-stat { transition: none; } }
+.arcade-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 56px;
+  padding: 0 2rem;
+  border: 1px solid transparent;
+  border-radius: 20px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--g) 82%, white), var(--g));
+  color: var(--on-g);
+  font-family: var(--font-display), var(--font-inter), sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  box-shadow: inset 0 2px 1px rgb(255 255 255 / 0.5), 0 5px 0 var(--g-deep), 0 12px 20px -6px color-mix(in srgb, var(--g-deep) 55%, transparent);
+  transition-property: transform, box-shadow;
+  transition-duration: 110ms;
+  transition-timing-function: var(--ease-out);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.arcade-btn:active:not(:disabled) { transform: translateY(4px) scale(0.98); box-shadow: inset 0 2px 1px rgb(255 255 255 / 0.5), 0 1px 0 var(--g-deep), 0 3px 8px -3px color-mix(in srgb, var(--g-deep) 55%, transparent); }
+.arcade-btn:disabled { opacity: 0.5; }
+.arcade-btn--quiet { --g: #ffffff; --g-deep: var(--well-2); background: var(--tile); color: var(--ink); box-shadow: 0 5px 0 var(--well-2), 0 10px 18px -8px var(--lift); }
+.arcade-btn--quiet:active:not(:disabled) { box-shadow: 0 1px 0 var(--well-2); }
+.arcade-btn--small { min-height: 46px; padding: 0 1.1rem; font-size: 1rem; border-radius: 16px; }
+.poster {
+  display: block;
+  overflow: hidden;
+  border-radius: 28px;
+  background: var(--tile);
+  box-shadow: 0 2px 4px var(--glow), 0 18px 34px -14px var(--lift);
+  transition-property: transform, box-shadow;
+  transition-duration: 280ms;
+  transition-timing-function: var(--spring);
+}
+.poster:active { transform: scale(0.97); }
+@media (hover: hover) and (pointer: fine) {
+  .poster:hover { transform: translateY(-6px) scale(1.012); box-shadow: 0 4px 8px var(--glow), 0 30px 44px -16px var(--lift); }
+  .poster:hover .art-bob { animation: art-bob 1.5s var(--ease-in-out) infinite alternate; }
+  .arcade-btn:hover:not(:disabled) { filter: brightness(1.05); }
+}
+.art-bob, .art-idle { transform-box: fill-box; transform-origin: center; }
+.art-idle { animation: art-bob 2.6s var(--ease-in-out) infinite alternate; }
+@keyframes art-bob { to { transform: translateY(-7px); } }
+
+.play-rise { animation: play-rise 460ms var(--ease-out) both; animation-delay: var(--delay, 0ms); }
+@keyframes play-rise { from { opacity: 0; transform: translateY(16px) scale(0.97); } to { opacity: 1; transform: none; } }
+.play-enter { animation: play-enter 340ms var(--ease-out) both; }
+@keyframes play-enter { from { opacity: 0; transform: translateX(22px); } to { opacity: 1; transform: none; } }
+/* Tiles deal onto a board one after another. */
+.deal { animation: deal 520ms var(--spring) both; animation-delay: var(--delay, 0ms); }
+@keyframes deal { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: none; } }
+
+/* A plump colour tile, shaded from one colour. */
+.clay {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--c) 78%, white), var(--c) 62%);
+  box-shadow: inset 0 2px 2px rgb(255 255 255 / 0.6), inset 0 -4px 6px color-mix(in srgb, var(--c) 72%, black 28%), 0 3px 6px color-mix(in srgb, var(--c) 55%, transparent);
+}
+[data-theme="dark"] .arcade .clay {
+  box-shadow: inset 0 2px 2px rgb(255 255 255 / 0.5), inset 0 -4px 6px color-mix(in srgb, var(--c) 72%, black 28%), 0 0 16px color-mix(in srgb, var(--c) 45%, transparent);
+}
+.play-timer { transform-origin: left; animation: play-timer var(--seconds) linear forwards; }
+@keyframes play-timer { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.option {
+  border: 3px solid transparent;
+  border-radius: 20px;
+  background: var(--tile);
+  box-shadow: 0 5px 0 var(--well-2), 0 10px 18px -10px var(--lift);
+  transition-property: transform, box-shadow, opacity;
+  transition-duration: 120ms;
+  transition-timing-function: var(--ease-out);
+  touch-action: manipulation;
+}
+.option:active:not(:disabled) { transform: translateY(3px) scale(0.98); box-shadow: 0 2px 0 var(--well-2); }
+.play-right { border-color: var(--good) !important; animation: game-pop 340ms var(--spring); }
+.play-wrong { border-color: var(--bad) !important; animation: shake 300ms var(--ease-out); }
+.game-pop { animation: game-pop 320ms var(--spring); }
+@keyframes game-pop { from { transform: scale(0.7); } to { transform: none; } }
+.game-shake { animation: shake 300ms var(--ease-out); }
+@keyframes shake { 25% { transform: translateX(-6px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-3px); } }
+.game-glow { animation: game-glow 800ms var(--ease-in-out) infinite alternate; }
+@keyframes game-glow { to { transform: scale(1.08); } }
+.play-meter { transform-origin: left; transition: transform 1000ms var(--spring) 250ms; }
+
+/* Confetti falls once, for wins and personal bests. */
+.confetti { position: fixed; inset: 0; z-index: 50; overflow: hidden; pointer-events: none; }
+.confetti i {
+  position: absolute;
+  top: -24px;
+  left: var(--x);
+  width: var(--w);
+  height: calc(var(--w) * 1.6);
+  border-radius: 3px;
+  background: var(--c);
+  animation: confetti var(--t) cubic-bezier(0.3, 0.2, 0.6, 1) var(--d) both;
+}
+@keyframes confetti {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--drift), 105dvh) rotate(var(--spin)); }
+}
+
+/* Pip the owl. */
+.pip-blink { transform-box: fill-box; transform-origin: center; animation: pip-blink 4.2s linear infinite; }
+@keyframes pip-blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(0.08); } }
+.pip-sway { transform-box: fill-box; transform-origin: 50% 100%; animation: pip-sway 3s var(--ease-in-out) infinite alternate; }
+@keyframes pip-sway { from { transform: rotate(-2.5deg); } to { transform: rotate(2.5deg); } }
+.pip-cheer { transform-box: fill-box; transform-origin: 50% 100%; animation: pip-cheer 620ms var(--ease-in-out) infinite alternate; }
+@keyframes pip-cheer { from { transform: translateY(0) scaleY(0.96); } to { transform: translateY(-12%) scaleY(1.03); } }
+.pip-wing-l, .pip-wing-r { transform-box: fill-box; }
+.pip-wing-l { transform-origin: 90% 15%; }
+.pip-wing-r { transform-origin: 10% 15%; }
+.pip-flap .pip-wing-l { animation: wing-l 310ms var(--ease-in-out) infinite alternate; }
+.pip-flap .pip-wing-r { animation: wing-r 310ms var(--ease-in-out) infinite alternate; }
+@keyframes wing-l { from { transform: rotate(18deg); } to { transform: rotate(72deg); } }
+@keyframes wing-r { from { transform: rotate(-18deg); } to { transform: rotate(-72deg); } }
+.pip-shake { transform-box: fill-box; animation: shake 340ms var(--ease-out); }
+
+/* Badges. */
+.badge-toast { animation: badge-toast 3600ms var(--spring) both; }
+@keyframes badge-toast {
+  0% { opacity: 0; transform: translateY(120%) scale(0.9); }
+  12% { opacity: 1; transform: none; }
+  88% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(40%); }
+}
+
+/* Levels. */
+.level-node { display: grid; place-items: center; width: 3.25rem; aspect-ratio: 1; border-radius: 50%; font-size: 1.15rem; transition: transform 140ms var(--ease-out); touch-action: manipulation; }
+.level-node:active:not(:disabled) { transform: scale(0.92); }
+.star-on { fill: var(--gold); stroke: var(--gold); stroke-width: 1.5; }
+.star-off { fill: var(--well-2); stroke: var(--well-2); stroke-width: 1.5; }
+.star-pop { animation: star-pop 620ms var(--spring) both; animation-delay: var(--delay); }
+@keyframes star-pop { from { opacity: 0; transform: scale(0.2) rotate(-40deg); } to { opacity: 1; transform: none; } }
+
+/* Hoot & Seek. */
+.owl-drop { animation: owl-drop 460ms var(--spring) both; }
+@keyframes owl-drop { from { opacity: 0; transform: translateY(-46%) scale(0.5); } to { opacity: 1; transform: none; } }
+.owl-hop { animation: owl-hop 560ms var(--ease-in-out) both; animation-delay: var(--delay, 0ms); }
+@keyframes owl-hop { 40% { transform: translateY(-34%) scale(1.08); } 70% { transform: translateY(0) scale(0.96, 1.04); } }
+.owl-poof { pointer-events: none; animation: owl-poof 600ms var(--ease-out) both; }
+@keyframes owl-poof {
+  0% { opacity: 0; transform: scale(0.6); }
+  20% { opacity: 1; transform: scale(1.05) rotate(-6deg); }
+  40% { transform: rotate(6deg); }
+  60% { opacity: 1; transform: rotate(-4deg); }
+  100% { opacity: 0; transform: translateY(-30%) scale(0.8); }
+}
+.heart { fill: var(--bad); transition: transform 240ms var(--spring); }
+.heart-lost { fill: var(--well-2); transform: scale(0.82); }
+.mark-in { animation: game-pop 240ms var(--spring); }
+.hoot-dim { transition: opacity 180ms ease; }
+/* Every square stays visible inside its patch: this is what the player taps. */
+.hoot-square {
+  position: absolute;
+  inset: 6%;
+  border-radius: 24%;
+  background: var(--square);
+  box-shadow: inset 0 2px 0 var(--square-light), inset 0 -2px 0 var(--square-dark);
+  pointer-events: none;
+}
+
+/* Sudoku. */
+.sudoku-wave { animation: sudoku-wave 520ms var(--spring) both; animation-delay: var(--delay); }
+@keyframes sudoku-wave { 40% { transform: scale(1.16) translateY(-4px); } }
+
+/* Arrow Escape. */
+.arrow-fly { transition: transform 300ms var(--ease-in-out), opacity 300ms ease; pointer-events: none; }
+.penalty { animation: penalty 800ms var(--ease-out) both; }
+@keyframes penalty { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-26px); } }
+
+/* Colour Sort. */
+.lab-bench { background: linear-gradient(180deg, var(--lab-top), var(--lab-bottom)); }
+.flask { transition: transform 240ms var(--spring); touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.flask[data-lifted="true"] { transform: translateY(-18px); }
+.flask-glass {
+  background: linear-gradient(90deg, var(--glass-a), var(--glass-b) 45%, var(--glass-c));
+  box-shadow: inset 0 0 0 2.5px var(--glass-edge), inset 0 -6px 10px var(--glow), 0 8px 16px -6px var(--lift);
+}
+.liquid { background: linear-gradient(90deg, color-mix(in srgb, var(--c) 86%, white), var(--c) 40%, color-mix(in srgb, var(--c) 86%, black)); }
+.liquid-in { transform-origin: bottom; animation: liquid-in 280ms var(--ease-out) both; }
+@keyframes liquid-in { from { transform: scaleY(0); } to { transform: none; } }
+.flask-cork { animation: cork 440ms var(--spring) both; }
+@keyframes cork { from { opacity: 0; transform: translateY(-140%); } to { opacity: 1; transform: none; } }
+.pour-stream { position: fixed; z-index: 40; width: 9px; border-radius: 5px; pointer-events: none; transform-origin: top; animation: pour-stream 320ms var(--ease-out) both; }
+@keyframes pour-stream { from { transform: scaleY(0); } 70% { transform: scaleY(1); opacity: 1; } to { transform: scaleY(1); opacity: 0; } }
+
+/* Ludo. */
+.dice { transform-style: preserve-3d; transition: transform 700ms var(--ease-out); }
+.dice-face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  padding: 15%;
+  border-radius: 24%;
+  background: linear-gradient(145deg, var(--tile), var(--well));
+  box-shadow: inset 0 0 0 1px var(--glow), inset 0 -4px 8px var(--glow);
+  backface-visibility: hidden;
+}
+.dice-pip { place-self: center; width: 72%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 35% 30%, var(--ink-soft), var(--ink)); }
+.ludo-token { transition: transform 170ms var(--ease-in-out); }
+.ludo-hop { transform-box: fill-box; transform-origin: center; animation: ludo-hop 170ms var(--ease-out); }
+@keyframes ludo-hop { 50% { transform: translateY(-34%) scale(1.1); } }
+
+/* Reflex Test. */
+.reflex-go { animation: reflex-go 120ms linear both; }
+@keyframes reflex-go { from { opacity: 0.7; transform: scale(0.985); } to { opacity: 1; transform: none; } }
+.reflex-ring { position: absolute; inset: auto; width: 60vmin; aspect-ratio: 1; border-radius: 50%; box-shadow: 0 0 0 10px rgb(255 255 255 / 0.5); animation: reflex-ring 700ms var(--ease-out) both; }
+@keyframes reflex-ring { from { opacity: 1; transform: scale(0.1); } to { opacity: 0; transform: scale(1.5); } }
